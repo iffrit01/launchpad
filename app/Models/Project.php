@@ -17,10 +17,14 @@ class Project extends Model
         'source_update_task',
         'stage',
         'active',
+        'release_branch_patterns',
+        'environments',
     ];
 
     protected $casts = [
         'active' => 'boolean',
+        'release_branch_patterns' => 'array',
+        'environments' => 'array',
     ];
 
     public function sourceUpdateState(): HasOne

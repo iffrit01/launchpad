@@ -4,10 +4,21 @@ namespace App\Http\Controllers;
 
 use App\Models\Project;
 use App\Services\Deployment\SourceUpdateService;
+use App\Support\ProjectViewData;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
+use Illuminate\Support\Str;
+use Inertia\Response as InertiaResponse;
 
 class SourceUpdateController extends Controller
 {
+    public function page(): InertiaResponse
+    {
+        return inertia('SourceUpdates', [
+            'projects' => ProjectViewData::sourceUpdateProjects(),
+        ]);
+    }
+
     public function index(?string $project = null): JsonResponse
     {
         $query = Project::query()
@@ -47,5 +58,21 @@ class SourceUpdateController extends Controller
             'rerun' => $state->rerun,
             'requested_at' => optional($state->requested_at)->toIso8601String(),
         ], 202);
+    }
+
+    public function log(Project $project): Response
+    {
+        $state = $project->sourceUpdateState;
+        $path = $state?->last_log_path;
+
+        abort_if($path === null || $path === '', 404);
+
+        $logRoot = rtrim(config('launchpad.log_root'), '/');
+        abort_unless(Str::startsWith($path, $logRoot.'/'), 403);
+        abort_unless(is_file($path), 404);
+
+        return response(file_get_contents($path), 200, [
+            'Content-Type' => 'text/plain; charset=UTF-8',
+        ]);
     }
 }

@@ -16,6 +16,8 @@ return new class extends Migration
             $table->string('source_update_task')->nullable();
             $table->string('stage')->default('production');
             $table->boolean('active')->default(true);
+            $table->json('release_branch_patterns')->nullable();
+            $table->json('environments')->nullable();
             $table->timestamps();
         });
     }

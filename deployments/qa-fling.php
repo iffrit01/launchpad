@@ -6,6 +6,27 @@ use RuntimeException;
 
 localhost('production');
 
+host('staging.fling.com')
+    ->setHostname('ded30036.ded.reflected.net')
+    ->setRemoteUser('web1')
+    ->set('stage', 'stage')
+    ->set('roles', ['web'])
+    ->set('deploy_path', '/home/web1/staging.fling.com');
+
+host('www2-ord.fling.com')
+    ->setRemoteUser('web1')
+    ->set('stage', 'production')
+    ->set('roles', ['web'])
+    ->set('deploy_path', '/home/web1/qa.fling.com');
+
+host('dev.fling.com')
+    ->setHostname('devserver')
+    ->setRemoteUser('root')
+    ->set('stage', 'dev')
+    ->set('roles', ['web'])
+    ->set('deploy_path', '/sites/qa.fling.com')
+    ->setSshArguments(['-o UserKnownHostsFile=/dev/null', '-o StrictHostKeyChecking=no']);
+
 set('allow_anonymous_stats', false);
 set('git_repo', 'git@gitlab-ord.fling.com:gpdev/www-fling-com.git');
 set('git_cache', getenv('SOURCE_CACHE') ? rtrim(getenv('SOURCE_CACHE'), '/').'/qa.fling.com' : '/sources/qa.fling.com');
@@ -15,6 +36,8 @@ set('lock_build_suffix', '');
 set('git_tracked_branch_limit', 10);
 set('git_clone_timeout', 3600);
 set('git_fetch_timeout', 1800);
+set('slots', ['slot1', 'slot2']);
+set('slots_basepath', '{{deploy_path}}');
 set('git_tracked_branches', [
     'refs/remotes/origin/release-2026*',
     'refs/remotes/origin/release-2025*',
@@ -40,6 +63,30 @@ task('deploy:update-cache-qa', function (): void {
         invoke('deploy:build-unlock');
         invoke('deploy:unlock');
     }
+});
+
+desc('Print qa-fling host status as JSON');
+task('hosts:status-json', function (): void {
+    $deployPath = get('deploy_path');
+    $current = trim(run('if [ -h '.quote($deployPath.'/current').' ]; then readlink '.quote($deployPath.'/current').'; fi'));
+    $path = '';
+    $slot = '';
+    $rev = '';
+
+    if ($current !== '') {
+        $path = str_starts_with($current, '/') ? $current : $deployPath.'/'.$current;
+        $slot = basename($path);
+        $rev = trim(run('if [ -f '.quote($path.'/GIT_COMMIT').' ]; then cat '.quote($path.'/GIT_COMMIT').'; fi'));
+    }
+
+    writeln(json_encode([[
+        'host' => currentHost()->getAlias(),
+        'hostname' => currentHost()->getHostname(),
+        'stage' => get('stage'),
+        'path' => $path,
+        'slot' => $slot,
+        'rev' => $rev,
+    ]], JSON_PRETTY_PRINT));
 });
 
 desc('Lock qa-fling source update');
@@ -100,17 +147,16 @@ task('git:update-cache-qa', function (): void {
         run('git clone '.quote($repo).' '.quote($cache), timeout: get('git_clone_timeout'));
     }
 
-    run('git checkout -- .', cwd: $cache);
-    run('git clean -fdx', cwd: $cache);
-    run('git fetch --prune origin', cwd: $cache, timeout: get('git_fetch_timeout'));
+    run('cd '.quote($cache).' && git checkout -- .');
+    run('cd '.quote($cache).' && git clean -fdx');
+    run('cd '.quote($cache).' && git fetch --prune origin', timeout: get('git_fetch_timeout'));
 
     $tracked = implode(' ', array_map(fn (string $ref): string => quote($ref), get('git_tracked_branches')));
     $limit = (int) get('git_tracked_branch_limit', 0);
     $limitArg = $limit > 0 ? '--count='.$limit : '';
 
     $output = run(
-        'git for-each-ref --format="%(committerdate:iso-strict)%09%(refname:short)" --sort=-committerdate '.$limitArg.' '.$tracked,
-        cwd: $cache
+        'cd '.quote($cache).' && git for-each-ref --format="%(committerdate:iso-strict)%09%(refname:short)" --sort=-committerdate '.$limitArg.' '.$tracked
     );
 
     $branches = [];
