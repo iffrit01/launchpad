@@ -2,7 +2,7 @@
 
 Project Deployer recipes live here.
 
-The first migration should port one existing DeployUI recipe, then configure it in `config/projects.php`:
+The first migrated recipe is `qa-fling.php`, configured in `config/projects.php`:
 
 ```php
 [

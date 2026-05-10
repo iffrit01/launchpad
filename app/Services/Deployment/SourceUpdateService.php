@@ -55,9 +55,10 @@ class SourceUpdateService
             return $project->sourceUpdateState()->firstOrFail();
         }
 
-        $logPath = $this->logPath($project);
+        $logPath = null;
 
         try {
+            $logPath = $this->logPath($project);
             $output = $this->runner->runSourceUpdate($project, $logPath);
 
             return $this->complete($project, [

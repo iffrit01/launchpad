@@ -9,9 +9,9 @@ services:
     volumes:
       - .:/app
       - launchpad_composer_cache:/home/launchpad/.composer/cache
-      - "${LAUNCHPAD_SSH_DIR:-./storage/ssh}:/home/launchpad/.ssh:ro"
-      - "${LAUNCHPAD_SOURCE_ROOT:-./storage/sources}:/sources"
-      - "${LAUNCHPAD_LOG_ROOT:-./storage/deploy-logs}:/deploy-logs"
+      - "${LAUNCHPAD_SSH_HOST_PATH:-./storage/ssh}:/home/launchpad/.ssh:ro"
+      - "${LAUNCHPAD_SOURCE_HOST_PATH:-./storage/sources}:/sources"
+      - "${LAUNCHPAD_LOG_HOST_PATH:-./storage/deploy-logs}:/deploy-logs"
     environment:
       APP_ENV: local
     depends_on:
@@ -40,9 +40,9 @@ services:
     volumes:
       - .:/app
       - launchpad_composer_cache:/home/launchpad/.composer/cache
-      - "${LAUNCHPAD_SSH_DIR:-./storage/ssh}:/home/launchpad/.ssh:ro"
-      - "${LAUNCHPAD_SOURCE_ROOT:-./storage/sources}:/sources"
-      - "${LAUNCHPAD_LOG_ROOT:-./storage/deploy-logs}:/deploy-logs"
+      - "${LAUNCHPAD_SSH_HOST_PATH:-./storage/ssh}:/home/launchpad/.ssh:ro"
+      - "${LAUNCHPAD_SOURCE_HOST_PATH:-./storage/sources}:/sources"
+      - "${LAUNCHPAD_LOG_HOST_PATH:-./storage/deploy-logs}:/deploy-logs"
     depends_on:
       mysql:
         condition: service_healthy
@@ -59,9 +59,9 @@ services:
     volumes:
       - .:/app
       - launchpad_composer_cache:/home/launchpad/.composer/cache
-      - "${LAUNCHPAD_SSH_DIR:-./storage/ssh}:/home/launchpad/.ssh:ro"
-      - "${LAUNCHPAD_SOURCE_ROOT:-./storage/sources}:/sources"
-      - "${LAUNCHPAD_LOG_ROOT:-./storage/deploy-logs}:/deploy-logs"
+      - "${LAUNCHPAD_SSH_HOST_PATH:-./storage/ssh}:/home/launchpad/.ssh:ro"
+      - "${LAUNCHPAD_SOURCE_HOST_PATH:-./storage/sources}:/sources"
+      - "${LAUNCHPAD_LOG_HOST_PATH:-./storage/deploy-logs}:/deploy-logs"
     depends_on:
       mysql:
         condition: service_healthy

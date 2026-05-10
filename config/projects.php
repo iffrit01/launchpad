@@ -1,7 +1,6 @@
 <?php
 
 return [
-    /*
     [
         'slug' => 'qa-fling',
         'name' => 'QA Fling',
@@ -10,5 +9,4 @@ return [
         'stage' => 'production',
         'active' => true,
     ],
-    */
 ];

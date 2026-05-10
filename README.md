@@ -1,59 +1,99 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Launchpad
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Launchpad is the modern replacement for DeployUI.
 
-## About Laravel
+It is a Laravel 12, PHP 8.3, Inertia, Vue 3, MySQL, and Deployer 8 application. The first migration target is source-update automation: GitLab webhooks request a source-cache update, Launchpad stores one state row per project, and a queue worker runs the update through Deployer.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Local Start
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+```bash
+cd /home/y/projects/launchpad
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+cp .env.example .env
+mkdir -p storage/ssh storage/sources storage/deploy-logs
 
-## Learning Laravel
+docker compose build
+docker compose run --rm app composer install
+docker compose run --rm app php artisan key:generate
+docker compose run --rm app php artisan migrate --seed
+docker compose up -d
+```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+Open:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```text
+http://localhost:8080
+```
 
-## Laravel Sponsors
+## Daily Commands
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+docker compose ps
+docker compose logs -f web app worker scheduler mysql
+docker compose down
+docker compose up -d
+```
 
-### Premium Partners
+## First Migrated Flow
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+`qa-fling` source updates are configured in:
 
-## Contributing
+- `config/projects.php`
+- `deployments/qa-fling.php`
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Manual request:
 
-## Code of Conduct
+```bash
+curl -X POST http://localhost:8080/projects/qa-fling/source-update
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Webhook request:
 
-## Security Vulnerabilities
+```bash
+curl -X POST \
+  -H "X-Gitlab-Token: $LAUNCHPAD_WEBHOOK_TOKEN" \
+  http://localhost:8080/webhooks/gitlab/qa-fling/source-update
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Status:
 
-## License
+```bash
+curl http://localhost:8080/source-updates
+curl http://localhost:8080/source-updates/qa-fling
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+The first local `qa-fling` source update may take a long time because it clones the full `gpdev/www-fling-com` repository. If it times out during the first clone, remove the incomplete cache and retry:
+
+```bash
+rm -rf storage/sources/qa.fling.com
+curl -X POST http://localhost:8080/projects/qa-fling/source-update
+```
+
+## Runtime Mounts
+
+- `/sources`: source repository cache root.
+- `/deploy-logs`: source-update and deploy logs.
+- `/home/launchpad/.ssh`: read-only SSH keys for GitLab and target hosts.
+
+The local Docker Compose defaults map those to:
+
+- `./storage/sources`
+- `./storage/deploy-logs`
+- `./storage/ssh`
+
+For real server testing, point those environment variables at the real mounted paths.
+
+Host mount paths and container paths are intentionally separate:
+
+```env
+LAUNCHPAD_SOURCE_HOST_PATH=./storage/sources
+LAUNCHPAD_LOG_HOST_PATH=./storage/deploy-logs
+LAUNCHPAD_SOURCE_ROOT=/sources
+LAUNCHPAD_LOG_ROOT=/deploy-logs
+```
+
+## Documentation
+
+- `docs/local-commands.md`
+- `docs/qa-fling-source-update.md`
+- `docs/launchpad-architecture.md`

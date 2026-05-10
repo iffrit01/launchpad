@@ -15,6 +15,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             HandleInertiaRequests::class,
         ]);
+
+        $middleware->validateCsrfTokens(except: [
+            'projects/*/source-update',
+            'webhooks/gitlab/*/source-update',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
